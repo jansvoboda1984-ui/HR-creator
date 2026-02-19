@@ -1,6 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { GeneratedAdResponse } from '../types';
+// @ts-ignore - html2pdf nemá oficiální types, ale funguje skvěle
+import html2pdf from 'html2pdf.js';
 
 interface AdDisplayProps {
   ad: GeneratedAdResponse;
@@ -8,9 +9,9 @@ interface AdDisplayProps {
 
 const AdDisplay: React.FC<AdDisplayProps> = ({ ad }) => {
   const [copied, setCopied] = useState(false);
+  const adRef = useRef<HTMLDivElement>(null); // Reference pro export do PDF
 
   const handleCopy = () => {
-    // Formátování textu pro LinkedIn s emotikonami a jasnou strukturou
     const fullText = `
 🚀 ${ad.headline.toUpperCase()}
 
@@ -34,6 +35,26 @@ ${ad.offer}
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handleDownloadPDF = () => {
+    if (!adRef.current) return;
+
+    const element = adRef.current;
+    const opt = {
+      margin:       [10, 10],
+      filename:     `Inzerat-${ad.headline.slice(0, 20)}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { 
+        scale: 2, 
+        useCORS: true, 
+        backgroundColor: '#0f172a' // Zachová tmavé pozadí Slate-950
+      },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // Spustíme generování
+    html2pdf().set(opt).from(element).save();
   };
 
   return (
@@ -65,80 +86,81 @@ ${ad.offer}
         </button>
       </div>
 
-      {ad.criticism && (
-        <div className="bg-amber-950/30 border-2 border-amber-500/30 p-5 rounded-2xl animate-in zoom-in duration-300">
-          <div className="flex items-center space-x-3 mb-2 text-amber-400 font-black tracking-widest text-xs">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span>[ KRITICKÁ SEBEREFLEXE ]</span>
-          </div>
-          <p className="text-amber-200/80 text-sm italic leading-relaxed font-medium">{ad.criticism}</p>
-        </div>
-      )}
-
-      <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-        <div>
-          <h3 className="text-4xl font-black text-white leading-tight mb-6 tracking-tight">{ad.headline}</h3>
-          <div className="flex flex-wrap gap-2 mb-6">
-             <span className="px-3 py-1 bg-violet-600 text-white text-[10px] font-black rounded-md uppercase tracking-widest">
-              Premium Ad
-            </span>
-             <span className="px-3 py-1 bg-slate-800 text-slate-400 text-[10px] font-black rounded-md uppercase tracking-widest border border-slate-700">
-              EB Optimized
-            </span>
-          </div>
-        </div>
-
-        <div className="relative">
-          <div className="absolute -left-4 top-0 bottom-0 w-1.5 bg-gradient-to-b from-violet-600 to-transparent rounded-full"></div>
-          <p className="text-xl text-slate-300 font-medium leading-relaxed italic pl-6">
-            {ad.hook}
-          </p>
-        </div>
-
-        <section className="group">
-          <h4 className="text-xs font-black text-violet-400 mb-4 flex items-center tracking-widest uppercase">
-            <span className="w-6 h-6 rounded-lg bg-violet-600/20 flex items-center justify-center mr-3 text-violet-400 border border-violet-500/30 group-hover:scale-110 transition-transform">1</span>
-            O čem to bude reálně?
-          </h4>
-          <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed border border-slate-700/50 group-hover:border-violet-500/20 transition-colors">
-            {ad.content}
-          </div>
-        </section>
-
-        <section className="group">
-          <h4 className="text-xs font-black text-violet-400 mb-4 flex items-center tracking-widest uppercase">
-             <span className="w-6 h-6 rounded-lg bg-violet-600/20 flex items-center justify-center mr-3 text-violet-400 border border-violet-500/30 group-hover:scale-110 transition-transform">2</span>
-            Hledáme parťáka, který...
-          </h4>
-          <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed border border-slate-700/50 group-hover:border-violet-500/20 transition-colors">
-            {ad.requirements}
-          </div>
-        </section>
-
-        <section className="group">
-          <h4 className="text-xs font-black text-violet-400 mb-4 flex items-center tracking-widest uppercase">
-             <span className="w-6 h-6 rounded-lg bg-violet-600/20 flex items-center justify-center mr-3 text-violet-400 border border-violet-500/30 group-hover:scale-110 transition-transform">3</span>
-            Proč k nám budete chodit rádi?
-          </h4>
-          <div className="bg-gradient-to-br from-violet-900/20 to-indigo-900/20 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed border border-violet-500/30 shadow-lg shadow-violet-950/20">
-            {ad.offer}
-          </div>
-        </section>
-
-        <div className="pt-10 border-t border-slate-800 flex flex-col items-center">
-          <div className="text-center space-y-4">
-            <p className="text-slate-500 text-sm font-medium">Líbí se vám tento návrh?</p>
-            <div className="flex space-x-3">
-               <button className="px-8 py-3 bg-white text-slate-950 font-black rounded-xl hover:bg-slate-200 transition-colors shadow-xl">
-                STÁHNOUT JAKO PDF
-              </button>
+      {/* Obalíme samotný obsah inzerátu do Ref, abychom netiskli i to tlačítko nahoře */}
+      <div ref={adRef} className="p-4 space-y-10">
+        {ad.criticism && (
+          <div className="bg-amber-950/30 border-2 border-amber-500/30 p-5 rounded-2xl animate-in zoom-in duration-300">
+            <div className="flex items-center space-x-3 mb-2 text-amber-400 font-black tracking-widest text-xs">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>[ KRITICKÁ SEBEREFLEXE ]</span>
             </div>
-            <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">
-              Architektura inzerátu odpovídá standardům Férového náboru
-            </p>
+            <p className="text-amber-200/80 text-sm italic leading-relaxed font-medium">{ad.criticism}</p>
           </div>
+        )}
+
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <div>
+            <h3 className="text-4xl font-black text-white leading-tight mb-6 tracking-tight">{ad.headline}</h3>
+            <div className="flex flex-wrap gap-2 mb-6">
+              <span className="px-3 py-1 bg-violet-600 text-white text-[10px] font-black rounded-md uppercase tracking-widest">Premium Ad</span>
+              <span className="px-3 py-1 bg-slate-800 text-slate-400 text-[10px] font-black rounded-md uppercase tracking-widest border border-slate-700">EB Optimized</span>
+            </div>
+          </div>
+
+          <div className="relative">
+            <div className="absolute -left-4 top-0 bottom-0 w-1.5 bg-gradient-to-b from-violet-600 to-transparent rounded-full"></div>
+            <p className="text-xl text-slate-300 font-medium leading-relaxed italic pl-6">{ad.hook}</p>
+          </div>
+
+          <section className="group">
+            <h4 className="text-xs font-black text-violet-400 mb-4 flex items-center tracking-widest uppercase">
+              <span className="w-6 h-6 rounded-lg bg-violet-600/20 flex items-center justify-center mr-3 text-violet-400 border border-violet-500/30">1</span>
+              O čem to bude reálně?
+            </h4>
+            <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed border border-slate-700/50">
+              {ad.content}
+            </div>
+          </section>
+
+          <section className="group">
+            <h4 className="text-xs font-black text-violet-400 mb-4 flex items-center tracking-widest uppercase">
+              <span className="w-6 h-6 rounded-lg bg-violet-600/20 flex items-center justify-center mr-3 text-violet-400 border border-violet-500/30">2</span>
+              Hledáme parťáka, který...
+            </h4>
+            <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed border border-slate-700/50">
+              {ad.requirements}
+            </div>
+          </section>
+
+          <section className="group">
+            <h4 className="text-xs font-black text-violet-400 mb-4 flex items-center tracking-widest uppercase">
+              <span className="w-6 h-6 rounded-lg bg-violet-600/20 flex items-center justify-center mr-3 text-violet-400 border border-violet-500/30">3</span>
+              Proč k nám budete chodit rádi?
+            </h4>
+            <div className="bg-gradient-to-br from-violet-900/20 to-indigo-900/20 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed border border-violet-500/30 shadow-lg shadow-violet-950/20">
+              {ad.offer}
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div className="pt-10 border-t border-slate-800 flex flex-col items-center">
+        <div className="text-center space-y-4">
+          <p className="text-slate-500 text-sm font-medium">Líbí se vám tento návrh?</p>
+          <div className="flex space-x-3">
+            {/* TADY JE OPRAVA: Přidán onClick */}
+            <button 
+              onClick={handleDownloadPDF}
+              className="px-8 py-3 bg-white text-slate-950 font-black rounded-xl hover:bg-slate-200 transition-colors shadow-xl"
+            >
+              STÁHNOUT JAKO PDF
+            </button>
+          </div>
+          <p className="text-[10px] text-slate-600 uppercase tracking-widest font-bold">
+            Architektura inzerátu odpovídá standardům Férového náboru
+          </p>
         </div>
       </div>
     </div>
