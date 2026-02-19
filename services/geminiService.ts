@@ -23,7 +23,7 @@ Výstup musí být ve formátu JSON podle specifikovaného schématu.
 `;
 
 export const generateJobAd = async (data: JobInputData): Promise<GeneratedAdResponse> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
   
   const textPrompt = `
   Zanalyzuj toto zadání a vytvoř inzerát:
