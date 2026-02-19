@@ -24,31 +24,49 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ad }) => {
 
     const element = adRef.current;
     
-    // Konfigurace pro PDF - ČERNÝ TEXT NA BÍLÉM
     const opt = {
       margin:       15,
       filename:     `Inzerat-${ad.headline.substring(0, 15)}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { 
         scale: 2,
-        backgroundColor: '#ffffff', // Bílé pozadí
-        logging: false,
+        useCORS: true,
+        backgroundColor: '#ffffff',
         onclone: (clonedDoc: Document) => {
-          // MAGIE: V naklonovaném dokumentu pro tisk přebarvíme vše na černo
-          const el = clonedDoc.getElementById('pdf-export-content');
-          if (el) {
-            el.style.color = '#000000';
-            el.style.backgroundColor = '#ffffff';
-            // Přebarvíme i nadpisy a sekce
-            el.querySelectorAll('*').forEach((child: any) => {
-              child.style.color = '#000000';
-              child.style.borderColor = '#eeeeee';
-              // Odstraníme tmavé pozadí z bublin
-              if (child.className.includes('bg-')) {
-                child.style.backgroundColor = '#f8fafc';
-              }
-            });
-          }
+          // BRUTÁLNÍ SÍLA: Vložíme do tiskového dokumentu vlastní CSS
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            #pdf-export-content {
+              background: white !important;
+              color: black !important;
+              padding: 10px !important;
+            }
+            /* Všechno v PDF bude černé */
+            #pdf-export-content * {
+              color: black !important;
+              background-color: transparent !important;
+              border-color: #d1d5db !important;
+              text-shadow: none !important;
+            }
+            /* Nadpis bude extra výrazný */
+            #pdf-export-content h3 {
+              color: #000000 !important;
+              font-weight: 900 !important;
+            }
+            /* Kritika bude mít šedý podkres, aby byla čitelná */
+            #pdf-export-content .criticism-box {
+              background-color: #fef3c7 !important;
+              border: 1px solid #f59e0b !important;
+              padding: 15px !important;
+              border-radius: 8px !important;
+            }
+            /* Vypnutí těch fialových gradientů v PDF */
+            #pdf-export-content .bg-gradient-to-br {
+              background: #f8fafc !important;
+              border: 1px solid #e2e8f0 !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
         }
       },
       jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -70,31 +88,34 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ad }) => {
         </button>
       </div>
 
+      {/* ID pdf-export-content je klíčové pro naše tiskové CSS */}
       <div ref={adRef} id="pdf-export-content" className="space-y-10 p-4">
         {ad.criticism && (
-          <div className="bg-amber-950/30 border-2 border-amber-500/30 p-5 rounded-2xl">
+          <div className="criticism-box bg-amber-950/30 border-2 border-amber-500/30 p-5 rounded-2xl">
             <h4 className="text-amber-400 font-black text-xs mb-2 uppercase">[ KRITIKA ZADÁNÍ ]</h4>
             <p className="text-amber-200/80 text-sm italic">{ad.criticism}</p>
           </div>
         )}
 
-        <div className="space-y-6">
-          <h3 className="text-4xl font-black text-white leading-tight">{ad.headline}</h3>
-          <p className="text-xl text-slate-300 font-medium italic border-l-4 border-violet-600 pl-6">{ad.hook}</p>
+        <div className="space-y-10">
+          <div>
+            <h3 className="text-4xl font-black text-white leading-tight mb-4">{ad.headline}</h3>
+            <p className="text-xl text-slate-300 font-medium italic border-l-4 border-violet-600 pl-6">{ad.hook}</p>
+          </div>
           
           <section>
-            <h4 className="text-xs font-black text-violet-400 mb-2 uppercase">1. Náplň práce</h4>
-            <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap">{ad.content}</div>
+            <h4 className="text-xs font-black text-violet-400 mb-4 uppercase tracking-widest">1. Náplň práce</h4>
+            <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed">{ad.content}</div>
           </section>
 
           <section>
-            <h4 className="text-xs font-black text-violet-400 mb-2 uppercase">2. Požadavky</h4>
-            <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap">{ad.requirements}</div>
+            <h4 className="text-xs font-black text-violet-400 mb-4 uppercase tracking-widest">2. Požadavky</h4>
+            <div className="bg-slate-800/40 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed">{ad.requirements}</div>
           </section>
 
           <section>
-            <h4 className="text-xs font-black text-violet-400 mb-2 uppercase">3. Co nabízíme</h4>
-            <div className="bg-gradient-to-br from-violet-900/20 to-indigo-900/20 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap">{ad.offer}</div>
+            <h4 className="text-xs font-black text-violet-400 mb-4 uppercase tracking-widest">3. Co nabízíme</h4>
+            <div className="bg-gradient-to-br from-violet-900/20 to-indigo-900/20 p-6 rounded-2xl text-slate-300 whitespace-pre-wrap leading-relaxed">{ad.offer}</div>
           </section>
         </div>
       </div>
@@ -102,9 +123,9 @@ const AdDisplay: React.FC<AdDisplayProps> = ({ ad }) => {
       <div className="pt-10 border-t border-slate-800 flex flex-col items-center">
         <button 
           onClick={handleDownloadPDF}
-          className="px-8 py-4 bg-white text-slate-950 font-black rounded-xl hover:bg-slate-200 transition-all shadow-2xl scale-100 hover:scale-105 active:scale-95"
+          className="px-8 py-4 bg-white text-slate-950 font-black rounded-xl hover:bg-slate-200 transition-all shadow-2xl active:scale-95"
         >
-          STÁHNOUT JAKO PDF (Tisková verze)
+          STÁHNOUT JAKO PDF
         </button>
       </div>
     </div>
